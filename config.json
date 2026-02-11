@@ -1,0 +1,212 @@
+{
+  "log": {
+    "loglevel": "warning",
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log"
+  },
+  "api": {
+    "tag": "api",
+    "services": ["HandlerService", "LoggerService", "StatsService"]
+  },
+  "stats": {},
+  "policy": {
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true,
+      "statsOutboundUplink": true,
+      "statsOutboundDownlink": true
+    }
+  },
+  "inbounds": [
+    {
+      "port": 443,
+      "protocol": "vless",
+      "tag": "vless-tls-xtls",
+      "settings": {
+        "clients": [
+          {
+            "id": "ead6ab4e-1806-46c3-9d56-db3e44f8f0e4",
+            "flow": "xtls-rprx-vision",
+            "email": "admin@atlantis.local",
+            "level": 0
+          }
+        ],
+        "decryption": "none",
+        "fallbacks": []
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/usr/local/x-ui/cert/certificate.crt",
+              "keyFile": "/usr/local/x-ui/cert/private.key"
+            }
+          ],
+          "alpn": ["h2", "http/1.1"],
+          "minVersion": "1.2",
+          "cipherSuites": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305:TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"],
+        "metadataOnly": false
+      }
+    },
+    {
+      "port": 8443,
+      "protocol": "vless",
+      "tag": "vless-ws",
+      "settings": {
+        "clients": [
+          {
+            "id": "ead6ab4e-1806-46c3-9d56-db3e44f8f0e4",
+            "email": "ws@atlantis.local"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "path": "/atlantis",
+          "headers": {
+            "Host": "atlantis.cloud"
+          }
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      }
+    },
+    {
+      "port": 2053,
+      "protocol": "vless",
+      "tag": "vless-ws-tls",
+      "settings": {
+        "clients": [
+          {
+            "id": "ead6ab4e-1806-46c3-9d56-db3e44f8f0e4",
+            "email": "tls@atlantis.local"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/usr/local/x-ui/cert/certificate.crt",
+              "keyFile": "/usr/local/x-ui/cert/private.key"
+            }
+          ],
+          "serverName": "atlantis.cloud"
+        },
+        "wsSettings": {
+          "path": "/atlantis-secure",
+          "headers": {
+            "Host": "atlantis.cloud"
+          }
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      }
+    },
+    {
+      "port": 1080,
+      "protocol": "socks",
+      "tag": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true,
+        "ip": "0.0.0.0"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      }
+    },
+    {
+      "port": 8080,
+      "protocol": "http",
+      "tag": "http-proxy",
+      "settings": {},
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct",
+      "settings": {
+        "domainStrategy": "UseIP"
+      }
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+  ],
+  "dns": {
+    "servers": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query",
+      "https://9.9.9.9/dns-query"
+    ],
+    "queryStrategy": "UseIP"
+  },
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api",
+        "enabled": false
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": [
+          "geosite:google",
+          "geosite:youtube",
+          "geosite:netflix",
+          "geosite:spotify",
+          "geosite:telegram",
+          "geosite:twitter",
+          "geosite:facebook",
+          "geosite:instagram",
+          "geosite:tiktok",
+          "geosite:whatsapp",
+          "geosite:discord",
+          "geosite:github",
+          "geosite:microsoft",
+          "geosite:apple",
+          "geosite:amazon",
+          "geosite:cloudflare"
+        ]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": ["geoip:private", "geoip:cn"]
+      },
+      {
+        "type": "field",
+        "port": "0-65535",
+        "outboundTag": "direct"
+      }
+    ]
+  }
+}
